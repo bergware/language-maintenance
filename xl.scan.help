@@ -1,0 +1,65 @@
+#!/usr/bin/php -q
+<?PHP
+/*
+  xl.scan.help - find new and unused help sections in source webgui code, and check presence in native helptext file
+  Copyright @2021, Bergware International.
+*/
+
+$plugins  = "/usr/local/emhttp/plugins";
+$rootdir  = "/boot/unraid/languages";
+$native   = "$rootdir/lang-en_US";
+$helptext = file("$native/helptext.txt",FILE_IGNORE_NEW_LINES);
+$site     = array_filter(glob("$plugins/*",GLOB_ONLYDIR|GLOB_NOSORT),'webgui');
+$folders  = ['include','scripts','nchan','templates'];
+$missing  = $source = $list = $help = $unused = [];
+
+function webgui($path) {
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.vm.manager']);
+}
+function base($file) {
+  global $plugins;
+  return str_replace("$plugins/",'',$file);
+}
+function init(&$array) {
+  if (!isset($array)) $array = [];
+}
+function screen($text,&$array) {
+  echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
+}
+// create list of files
+foreach ($site as $path) {
+  foreach (glob("$path/*.page",GLOB_NOSORT) as $file) $list[] = $file;
+  foreach ($folders as $folder) foreach (glob("$path/$folder/{.[!.],}*",GLOB_NOSORT|GLOB_BRACE) as $file) $list[] = $file;
+}
+sort($list);
+// create list of help sections per file
+foreach ($list as $file) {
+  $data = file($file,FILE_IGNORE_NEW_LINES);
+  foreach ($data as $row) if (preg_match('/^:(.+?_help):$/',$row,$matches)) {
+    $name = base($file);
+    init($help[$name]);
+    $help[$name][] = $matches[1];
+  }
+}
+// create list of sections in helptext.txt
+foreach ($helptext as $row) if (preg_match('/^:(.+?_help):$/',$row,$matches)) {
+  $source[] = $matches[1];
+}
+// find missing help sections in source code
+foreach ($help as $row => $names) {
+  foreach ($names as $name) {
+    if (!in_array($name,$source)) {
+      init($missing[$row]);
+      if (!in_array($name,$missing[$row])) $missing[$row][] = $name;
+    }
+  }
+}
+// find unused help sections in helptext.txt
+foreach ($source as $find) {
+  $void = true;
+  foreach ($help as $row => $names) if (in_array($find,$names)) {$void=false; break;}
+  if ($void) $unused[] = $find;
+}
+screen("\nMissing entries in source code",$missing);
+screen("\nUnused entries in helptext",$unused);
+?>

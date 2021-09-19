@@ -1,0 +1,174 @@
+#!/usr/bin/php -q
+<?PHP
+/*
+  xl.scan.new - find new entries in source webgui code, and check presence in native language files
+  Copyright @2021, Bergware International.
+*/
+
+$plugins  = "/usr/local/emhttp/plugins";
+$rootdir  = "/boot/unraid/languages";
+$native   = "$rootdir/lang-en_US";
+$site     = array_filter(glob("$plugins/*",GLOB_ONLYDIR|GLOB_NOSORT),'webgui');
+$pattern  = '/_\((.+?)\)_|_\([\'"](.+?)[\'"]\)|^Title="(.+?)"$|\$language\[["\'](.+?)["\']\]/m';
+$request  = '/\$_SERVER\[["\']REQUEST_URI["\']\] = ["\'](.*?)["\']/';
+$folders  = ['include','scripts','nchan','templates'];
+$files    = ['DefaultPageLayout.php','.login.php','.set-password.php','myservers1.php','myservers2.php'];
+$keys     = ['Days_array','Months_array','Numbers_array','prefix_IEC','prefix_SI'];
+$sections = $more = $list = $other = [];
+
+function webgui($path) {
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.vm.manager']);
+}
+function make($array) {
+  return array_map(function($k,$v){return $v ?: preg_replace('/\.$/','',$k);},array_keys($array),array_values($array));
+}
+function escapeQuotes($text) {
+  return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
+}
+function parse_lang_file($file) {
+  return file_exists($file) ? parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file)))) : [];
+}
+function head($file) {
+  return file_get_contents($file,false,null,0,1024);
+}
+function add($file, $section, $key) {
+  global $sections, $list;
+  if (!in_array($file,$sections[$section]) && preg_match('/^Menu="'.$key.'(:\d+)?"/i',head($file))) $sections[$section][] = $list[] = $file;
+}
+function base($file) {
+  global $plugins;
+  return str_replace("$plugins/",'',$file);
+}
+function remap($text) {
+  return preg_replace(['/\&amp;|[\?\{\}\|\&\~\!\[\]\(\)\/\\:\*^\.\"\']|<.+?\/?>/','/^(null|yes|no|true|false|on|off|none)$/i','/  +/'],['','$1.',' '],$text);
+}
+function init(&$array) {
+  if (!isset($array)) $array = [];
+}
+function screen($text,&$array) {
+  echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
+}
+// create the top sections (tasks)
+foreach ($site as $path) {
+  foreach (glob("$path/*.page",GLOB_NOSORT) as $file) {
+    if (preg_match('/^Menu=".*Tasks(:\d+)?"/i',head($file))) {
+      $section = strtolower(basename($file,'.page'));
+      init($sections[$section]);
+    }
+  }
+}
+// add pages with first level references
+foreach ($site as $path) {
+  foreach ($sections as $section => $pages) {
+    foreach (glob("$path/*.page",GLOB_NOSORT) as $file) add($file, $section, $section);
+  }
+}
+// add pages with second level references
+foreach ($site as $path) {
+  foreach ($sections as $section => $pages) {
+    foreach ($pages as $page) {
+      foreach (glob("$path/*.page",GLOB_NOSORT) as $file) add($file, $section, basename($page,'.page'));
+    }
+  }
+}
+// add pages with remaining level references
+foreach ($site as $path) {
+  foreach (glob("$path/*.page",GLOB_NOSORT) as $file) {
+    foreach ($sections as $section => $pages) {
+      foreach ($pages as $page) add($file, $section, basename($page,'.page'));
+    }
+  }
+}
+// list remaining pages and folders
+foreach ($site as $path) {
+  foreach (glob("$path/*.page",GLOB_NOSORT) as $file) {
+    if (!in_array($file,$more) && !in_array($file,$list)) $more[] = $file;
+  }
+  foreach ($folders as $folder) {
+    foreach (glob("$path/$folder/{.[!.],}*",GLOB_NOSORT|GLOB_BRACE) as $file) {
+      if (in_array(basename($file),$files)||preg_match($request,head($file),$matches)) {
+        $section = strtolower($matches[1]) ?: 'translations';
+        init($sections[$section]);
+        $sections[$section][] = $list[] = $file;
+      }
+    }
+  }
+}
+// list anything else
+foreach ($site as $path) {
+  foreach (glob("$path/*",GLOB_NOSORT) as $file) {
+    if (is_file($file) && !in_array($file,$list) && !in_array($file,$more)) $other[] = $file;
+  }
+}
+ksort($sections);
+// =============================================================================================
+// Debug info
+//sort($more);
+//sort($list);
+//sort($other);
+//screen('Sections',$sections);
+//screen('More',$more);
+//screen('List',$list);
+//screen('Other',$other);
+
+// =============================================================================================
+$data = $new = [];
+
+foreach ($sections as $section => $pages) {
+  $text = [];
+  foreach ($pages as $page) {
+    $text[] = $page;
+    if (preg_match_all($pattern,file_get_contents($page),$matches)) {
+      $matches = array_filter(array_merge($matches[1],$matches[2],$matches[3],$matches[4]));
+      natcasesort($matches);
+      $text = array_merge($text,array_unique($matches,SORT_STRING));
+    }
+  }
+  if (count($text)) $data[$section] = array_values($text);
+}
+foreach ($data as $section => $lines) {
+  $lang = make(parse_lang_file("$native/translations.txt"));;
+  foreach (explode('/',$section) as $area) $lang = array_merge($lang,make(parse_lang_file("$native/$area.txt")));
+  foreach ($lines as $line) {
+    if ($line[0]=='/') {$file = $line; continue;}
+    if (!in_array($line,$lang)) {
+      $key = remap($line);
+      if (!in_array($key,$keys)) $new[$section][] = base($file)." -> $key=".($line==$key ? '' : $line);
+    }
+  }
+}
+
+screen('Regular entries',$new);
+// =============================================================================================
+$data = $new = [];
+
+foreach ($more as $page) {
+  $text = [];
+  if (preg_match_all($pattern,file_get_contents($page),$matches)) {
+    $matches = array_filter(array_merge($matches[1],$matches[2],$matches[3],$matches[4]));
+    natcasesort($matches);
+    $text = array_merge($text,array_unique($matches,SORT_STRING));
+  }
+  if (count($text)) $data[$page] = array_values($text);
+}
+ksort($data);
+foreach ($data as $file => $lines) {
+  foreach ($lines as $line) {
+    $exist = [];
+    foreach (array_keys($sections) as $section) {
+      $lang = make(parse_lang_file("$native/translations.txt"));;
+      foreach (explode('/',$section) as $area) $lang = array_merge($lang,make(parse_lang_file("$native/$area.txt")));
+      if (in_array($line,$lang)) {
+        $key = remap($line);
+        $exist[] = "$section -> $key=".($line==$key ? '' : $line);
+        break;
+      }
+    }
+    if (!count($exist)) {
+      $key = remap($line);
+      $new[base($file)][] = "$key=".($line==$key ? '' : $line);
+    }
+  }
+}
+screen("\nMore entries",$new);
+?>

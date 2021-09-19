@@ -1,0 +1,70 @@
+#!/usr/bin/php -q
+<?PHP
+/*
+  xl.copy.help - copy new help sections and remove unused sections in foreign helptext files
+  Copyright @2021, Bergware International.
+*/
+
+$rootdir = "/boot/unraid/languages";
+$native  = "$rootdir/lang-en_US/helptext.txt";
+$foreign = array_filter(glob("$rootdir/*",GLOB_ONLYDIR|GLOB_NOSORT),'foreign');
+
+function foreign($lang) {
+  return strpos($lang,'en_US')===false;
+}
+function escapeQuotes($text,$in=1) {
+  switch ($in) {
+    case 1: return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
+    case 0: return str_replace('"','\"',$text);
+  }
+}
+function parse_help_file($file) {
+  return file_exists($file) ? parse_ini_string(preg_replace(['/^:(.+_help(_\d{8})?):$/m','/^:end$/m'],['_$1="','"'],escapeQuotes(file_get_contents($file)))) : [];
+}
+function base($file) {
+  global $plugins;
+  return str_replace("$plugins/",'',$file);
+}
+function screen($text,&$array) {
+  echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
+}
+$name = basename($native);
+$source = parse_help_file($native);
+
+// remove unused entries
+foreach ($foreign as $language) {
+  $output = "$language/$name";
+  $target = parse_help_file($output);
+  $file   = base($output);
+  $void   = [];
+  // make list of entries to remove
+  foreach ($target as $row => $text) if (!isset($source[$row])) {
+    $label = substr($row,1);
+    $void[] = "/^:$label:\\\$/,/^:end\\\$/d";
+  }
+  $size = count($void);
+  if ($size) {
+    $void = array_unique($void,SORT_STRING);
+    echo "Updating (delete): $output ($size)\n";
+    foreach ($void as $row) exec("sed -ri \"$row\" $output");
+  }
+}
+// add new entries
+foreach ($foreign as $language) {
+  $output = "$language/$name";
+  $target = parse_help_file($output);
+  $new    = [];
+  // make list of entries to add
+  foreach ($source as $row => $text) if (!isset($target[$row])) {
+    $label = substr($row,1);
+    $new[] = "\n:$label:".escapeQuotes($text,0).":end";
+  }
+  $size = count($new);
+  if ($size) {
+    echo "Updating (add): $output ($size)\n";
+    $date = date('Y-m-d');
+    exec("echo -e \"\n; New entries ($size) - $date\" >>$output");
+    foreach ($new as $row) exec("echo -e \"$row\" >>$output");
+  }
+}
+?>
