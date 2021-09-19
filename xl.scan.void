@@ -108,7 +108,7 @@ foreach ($sections as $section => $pages) {
     natcasesort($text);
     $join = [];
     foreach (explode('/',$section) as $area) {
-      if (!isset($data[$area])) $data[$area] = [];
+      init($data[$area]);
       $join = array_merge($join,$data[$area],array_unique($text,SORT_STRING));
     }
     $join = array_values(array_unique($join,SORT_STRING));
