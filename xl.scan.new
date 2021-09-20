@@ -127,7 +127,7 @@ foreach ($sections as $section => $pages) {
   if (count($text)) $data[$section] = array_values($text);
 }
 foreach ($data as $section => $lines) {
-  $lang = make(parse_lang_file("$native/translations.txt"));;
+  $lang = make(parse_lang_file("$native/translations.txt"));
   foreach (explode('/',$section) as $area) $lang = array_merge($lang,make(parse_lang_file("$native/$area.txt")));
   foreach ($lines as $line) {
     if ($line[0]=='/') {$file = $line; continue;}
@@ -156,7 +156,7 @@ foreach ($data as $file => $lines) {
   foreach ($lines as $line) {
     $exist = [];
     foreach (array_keys($sections) as $section) {
-      $lang = make(parse_lang_file("$native/translations.txt"));;
+      $lang = make(parse_lang_file("$native/translations.txt"));
       foreach (explode('/',$section) as $area) $lang = array_merge($lang,make(parse_lang_file("$native/$area.txt")));
       if (in_array($line,$lang)) {
         $key = remap($line);
