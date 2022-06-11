@@ -11,7 +11,8 @@ $native = glob("$rootdir/lang-en_US/*.txt",GLOB_NOSORT);
 $foreign = array_filter(glob("$rootdir/$select",GLOB_ONLYDIR|GLOB_NOSORT),'foreign');
 
 function foreign($lang) {
-  return strpos($lang,'en_US')===false;
+  global $argv;
+  return empty($argv[1]) ? strpos($lang,'en_US')===false : strpos($lang,$argv[1])!==false;
 }
 function escapeQuotes($text) {
   return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
