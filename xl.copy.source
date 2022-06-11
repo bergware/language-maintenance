@@ -1,0 +1,81 @@
+#!/usr/bin/php -q
+<?PHP
+/*
+  xl.copy.source - copy new source entries to foreign language files
+  Copyright @2021, Bergware International.
+*/
+
+$select  = isset($argv[1]) ? 'lang-'.$argv[1] : '*';
+$rootdir = "/boot/unraid/languages";
+$native = glob("$rootdir/lang-en_US/*.txt",GLOB_NOSORT);
+$foreign = array_filter(glob("$rootdir/$select",GLOB_ONLYDIR|GLOB_NOSORT),'foreign');
+
+function foreign($lang) {
+  return strpos($lang,'en_US')===false;
+}
+function escapeQuotes($text,$in=1) {
+  switch ($in) {
+    case 1: return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
+    case 0: return str_replace('"','\"',$text);
+  }
+}
+function tag($key) {
+  return preg_replace('/^(null|yes|no|true|false|on|off|none)$/i','$1.',$key);
+}
+function parse_lang_file($file) {
+  return file_exists($file) ? parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file)))) : [];
+}
+function screen($text,&$array) {
+  echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
+}
+// loop thru plugin language files
+foreach ($native as $file) {
+  $name = basename($file);
+  if ($name=='helptext.txt') continue;
+  $source = file($file,FILE_IGNORE_NEW_LINES);
+  // compare with foreign language files
+  foreach ($foreign as $language) {
+    $output = "$language/$name";
+    // skip non-existing translations
+    if (!file_exists($output)) continue;
+    $target = parse_lang_file($output);
+    $section = $size = 0;
+    $copy = [];
+    foreach ($source as $row) {
+      if (empty($row) || $row[0]==';') {
+        // empty row or comment
+        if ($section==0) $copy[] = $row;
+      } elseif ($row[0]==':' && substr($row,-5)=='plug:') {
+        // start of plug section
+        $copy[] = $row;
+        $section = 1;
+        $key = '_'.substr($row,1,-1);
+        if (!empty($target[$key])) {
+          $copy[] = preg_replace('/^\n+|\n+$/','',$target[$key]);
+          $section = 2;
+        }
+      } elseif ($row==':end') {
+        // end of plug section
+        $copy[] = $row;
+        $section = 0;
+      } elseif ($section==1) {
+        // inside plug section
+        $copy[] = $row;
+      } elseif ($section==0) {
+        // translation line
+        [$key,$text] = explode('=',$row,2);
+        $target[tag($key)] = trim($target[tag($key)]);
+        $copy[] = "$key=".($target[tag($key)] ?: $text);
+        if (empty($target[tag($key)])) $size++;
+      }
+    }
+    $tail = "\n";
+    if ($size) {
+      $date = date('F j, Y');
+      echo "Updating: $output ($size)\n";
+      $tail .= "\n; Note: $date - $size missing translations\n";
+    }
+    file_put_contents($output,implode("\n",$copy).$tail);
+  }
+}
+?>

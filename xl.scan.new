@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.new - find new entries in source webgui code, and check presence in native language files
-  Copyright @2021, Bergware International.
+  Copyright @2022, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -12,12 +12,12 @@ $site     = array_filter(glob("$plugins/*",GLOB_ONLYDIR|GLOB_NOSORT),'webgui');
 $pattern  = '/_\((.+?)\)_|_\([\'"](.+?)[\'"]\)|^Title="(.+?)"$|\$language\[["\'](.+?)["\']\]/m';
 $request  = '/\$_SERVER\[["\']REQUEST_URI["\']\] = ["\'](.*?)["\']/';
 $folders  = ['include','scripts','nchan','templates'];
-$files    = ['DefaultPageLayout.php','.login.php','.set-password.php','myservers1.php','myservers2.php'];
+$files    = ['DefaultPageLayout.php','.login.php','.set-password.php','myservers1.php','myservers2.php','file_manager'];
 $keys     = ['Days_array','Months_array','Numbers_array','prefix_IEC','prefix_SI'];
 $sections = $more = $list = $other = [];
 
 function webgui($path) {
-  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.vm.manager']);
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager','dynamix.file.manager']);
 }
 function make($array) {
   return array_map(function($k,$v){return $v ?: preg_replace('/\.$/','',$k);},array_keys($array),array_values($array));

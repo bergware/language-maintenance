@@ -34,6 +34,7 @@ $source = parse_help_file($native);
 // remove unused entries
 foreach ($foreign as $language) {
   $output = "$language/$name";
+  echo "Processing $output\n";
   $target = parse_help_file($output);
   $file   = base($output);
   $void   = [];

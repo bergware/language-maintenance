@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.help - find new and unused help sections in source webgui code, and check presence in native helptext file
-  Copyright @2021, Bergware International.
+  Copyright @2022, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -14,7 +14,7 @@ $folders  = ['include','scripts','nchan','templates'];
 $missing  = $source = $list = $help = $unused = [];
 
 function webgui($path) {
-  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.vm.manager']);
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager','dynamix.file.manager']);
 }
 function base($file) {
   global $plugins;
