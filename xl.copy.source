@@ -39,8 +39,8 @@ foreach ($native as $file) {
     // skip non-existing translations
     if (!file_exists($output)) continue;
     echo "Parsing: $output\n";
-    $target = parse_lang_file($output);
-    $note = exec("tail -1 ".escapeshellarg($output));
+    $target  = parse_lang_file($output);
+    $note    = exec("tail -1 ".escapeshellarg($output));
     $missing = $note[0]==';' ? explode(' ',explode(' - ',$note)[1])[0] : 0;
     $section = $size = 0;
     $copy = [];
