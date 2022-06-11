@@ -43,7 +43,7 @@ foreach ($plugins as $dir) {
       $note    = exec("tail -1 ".escapeshellarg($output));
       $missing = $note[0]==';' ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       $section = $size = 0;
-      $copy = [];
+      $copy    = [];
       foreach ($source as $row) {
         if (empty($row) || $row[0]==';') {
           // empty row or comment
