@@ -10,13 +10,10 @@ $plugins = glob("$rootdir/lang-en_US/*",GLOB_ONLYDIR|GLOB_NOSORT);
 $foreign = array_filter(glob("$rootdir/$select",GLOB_ONLYDIR|GLOB_NOSORT),'foreign');
 
 function foreign($lang) {
-  return strpos($lang,'en_US')===false;
+  return strpos($lang,'en_US')==false;
 }
-function escapeQuotes($text,$in=1) {
-  switch ($in) {
-    case 1: return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
-    case 0: return str_replace('"','\"',$text);
-  }
+function escapeQuotes($text) {
+  return str_replace(["\"\n",'"'],["\" \n",'\"'],$text);
 }
 function tag($key) {
   return preg_replace('/^(null|yes|no|true|false|on|off|none)$/i','$1.',$key);
@@ -37,9 +34,10 @@ foreach ($plugins as $dir) {
     foreach ($foreign as $language) {
       $output = "$language/$plugin/$name";
       // skip non-existing translations
-      if (!file_exists($output)) continue;
-      echo "Parsing: $output\n";
-      $target  = parse_lang_file($output);
+      if (!is_file($output)) continue;
+      echo "Parsing: $output".str_repeat(' ',120-strlen($output))."\r";
+      // skip when parse error
+      if (!($target = parse_lang_file($output))) continue;
       $note    = exec("tail -1 ".escapeshellarg($output));
       $missing = $note[0]==';' ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       $section = $size = 0;
@@ -74,13 +72,16 @@ foreach ($plugins as $dir) {
       }
       $tail = "\n";
       if ($size) {
-        $date = date('F j, Y');
-        echo "Updating: $output ($size)\n";
-        if ($size != $missing) $note = "; Note: $date - $size missing translations";
+        if ($size != $missing) {
+          echo "\nUpdating: $output ($size)\n";
+          $date = date('F j, Y');
+          $note = "; Note: $date - $size missing translations";
+        }
         $tail .= "\n$note\n";
       }
       file_put_contents($output,implode("\n",$copy).$tail);
     }
   }
 }
+echo str_repeat(' ',120)."\r";
 ?>
