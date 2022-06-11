@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.copy.plugin - copy new plugin entries to foreign language files
-  Copyright @2021, Bergware International.
+  Copyright @2022, Bergware International.
 */
 $select  = isset($argv[1]) ? 'lang-'.$argv[1] : '*';
 $rootdir = "/boot/unraid/languages";
@@ -22,7 +22,7 @@ function tag($key) {
   return preg_replace('/^(null|yes|no|true|false|on|off|none)$/i','$1.',$key);
 }
 function parse_lang_file($file) {
-  return file_exists($file) ? parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file)))) : [];
+  return parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file))));
 }
 function screen($text,&$array) {
   echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
@@ -38,7 +38,10 @@ foreach ($plugins as $dir) {
       $output = "$language/$plugin/$name";
       // skip non-existing translations
       if (!file_exists($output)) continue;
+      echo "Parsing: $output\n";
       $target = parse_lang_file($output);
+      $note = exec("tail -1 ".escapeshellarg($output));
+      $missing = $note[0]==';' ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       $section = $size = 0;
       $copy = [];
       foreach ($source as $row) {
@@ -73,7 +76,8 @@ foreach ($plugins as $dir) {
       if ($size) {
         $date = date('F j, Y');
         echo "Updating: $output ($size)\n";
-        $tail .= "\n; Note: $date - $size missing translations\n";
+        if ($size != $missing) $note = "; Note: $date - $size missing translations";
+        $tail .= "\n$note\n";
       }
       file_put_contents($output,implode("\n",$copy).$tail);
     }
