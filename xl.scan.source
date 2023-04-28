@@ -1,7 +1,7 @@
 #!/usr/bin/php -q
 <?PHP
 /*
-  xl.scan.new - find new entries in source webgui code, and check presence in native language files
+  xl.scan.source - find new entries in source webgui code, and check presence in native language files
   Copyright @2022, Bergware International.
 */
 
@@ -87,7 +87,7 @@ foreach ($site as $path) {
   foreach ($folders as $folder) {
     foreach (glob("$path/$folder/{.[!.],}*",GLOB_NOSORT|GLOB_BRACE) as $file) {
       if (in_array(basename($file),$files)||preg_match($request,head($file),$matches)) {
-        $section = strtolower($matches[1]) ?: 'translations';
+        $section = strtolower($matches[1]??'') ?: 'translations';
         init($sections[$section]);
         $sections[$section][] = $list[] = $file;
       }
