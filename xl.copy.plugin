@@ -19,6 +19,9 @@ function escapeQuotes($text) {
 function tag($key) {
   return preg_replace('/^(null|yes|no|true|false|on|off|none)$/i','$1.',$key);
 }
+function xlat($key) {
+  return preg_replace(['/\&amp;|[\?\{\}\|\&\~\!\[\]\(\)\/\\:\*^\.\"\']|<.+?\/?>/','/^(null|yes|no|true|false|on|off|none)$/i','/  +/'],['','$1.',' '],$key);
+}
 function parse_lang_file($file) {
   return parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file))));
 }
@@ -37,12 +40,13 @@ foreach ($plugins as $dir) {
       // skip non-existing translations
       if (!is_file($output)) continue;
       echo "Parsing: $output".str_repeat(' ',120-strlen($output))."\r";
+      // find missing translations
+      $note = exec("grep '^; Note:' ".escapeshellarg($output));
+      $missing = $note ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       // skip when parse error
       if (!($target = parse_lang_file($output))) continue;
-      $note    = exec("tail -1 ".escapeshellarg($output));
-      $missing = $note[0]==';' ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       $section = 0;
-      $copy    = $last = [];
+      $copy = $last = [];
       foreach ($source as $row) {
         if (empty($row) || $row[0]==';') {
           // empty row or comment
@@ -65,9 +69,13 @@ foreach ($plugins as $dir) {
           $copy[] = $row;
         } elseif ($section==0) {
           // translation line
-          [$key,$text] = array_pad(explode('=',$row,2),2,'');
-          $target[tag($key)] = trim($target[tag($key)]??'');
-          if (empty($target[tag($key)])) $last[] = "$key=".($target[tag($key)] ?: $text); else $copy[] = "$key=".($target[tag($key)] ?: $text);
+          [$key,$text] = explode('=',$row,2);
+          $new = trim($target[tag($key)]??'');
+          if (empty($new) || ($text && tag($key)==xlat($new) && strlen($target[tag($key)])!=strlen(xlat($new)) && strlen($key)>14)) {
+            $last[] = "$key=$text"; 
+          } else {
+            $copy[] = "$key=".($new ?: $text);
+          }
         }
       }
       $tail = "\n";
