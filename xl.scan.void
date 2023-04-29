@@ -28,7 +28,7 @@ function add($file, $section, $key) {
 }
 function mark($row) {
   global $keys;
-  if (strlen($row)==0 || $row[0]==';' || strpos($row,'=')===false) return '';
+  if ($row[0]==';' || strpos($row,'=')===false) return '';
   [$key,$val] = explode('=',$row);
   if (in_array($key,$keys)) return '';
   return $val ?: $key;
@@ -129,7 +129,7 @@ $data['translations'] = array_values(array_unique($data['translations'],SORT_STR
 foreach ($native as $file) {
   $section = basename($file,'.txt');
   if ($section=='helptext') continue;
-  $mark = array_filter(array_map('mark',file($file,FILE_IGNORE_NEW_LINES)));
+  $mark = array_filter(array_map('mark',file($file,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)));
   if ($section=='translations') {
     init($void[$section]);
     foreach ($mark as $text) {
