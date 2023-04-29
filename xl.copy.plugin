@@ -38,12 +38,12 @@ foreach ($plugins as $dir) {
       if (!is_file($output)) continue;
       // find current missing translations
       $note = exec("grep '^; Note:' ".escapeshellarg($output));
-      $missing = $note ? explode(' ',explode(' - ',$note)[1])[0] : 0;
+      $old = $note ? explode(' ',explode(' - ',$note)[1])[0] : 0;
       echo "Parsing: $output",str_repeat(' ',120-strlen($output)),"\r";
       // skip when parse error
       if (!($target = parse_lang_file($output))) continue;
       $section = 0;
-      $copy = $new = $shadow = [];
+      $copy = $missing = $shadow = [];
       foreach ($source as $row) {
         if (empty($row) || $row[0]==';') {
           // empty row or comment
@@ -74,7 +74,7 @@ foreach ($plugins as $dir) {
           $shadow[] = "$key=".($line ?: $text);
           if (empty($line) || ($text && tag($key)==remap($line) && strlen($target[tag($key)])!=strlen(remap($line)) && strlen($key)>14)) {
             // new or not translated key
-            $new[] = "$key=$text"; 
+            $missing[] = "$key=$text"; 
           } else {
             // translated key
             $copy[] = "$key=".($line ?: $text);
@@ -82,16 +82,16 @@ foreach ($plugins as $dir) {
         }
       }
       $tail = "\n";
-      $size = count($new);
-      if ($size) {
-        if ($size != $missing) {
-          echo "\nUpdating: $output ($size)\n";
+      $new = count($missing);
+      if ($new) {
+        if ($new != $old) {
+          echo "\nUpdating: $output ($new)\n";
           $date = date('F j, Y');
-          $note = "; Note: $date - $size missing translations";
+          $note = "; Note: $date - $new missing translations";
         }
-        if ($size < 60) {
+        if ($new < 60) {
           // show missing keys at the end
-          $tail .= "\n$note\n".implode("\n",$new)."\n";
+          $tail .= "\n$note\n".implode("\n",$missing)."\n";
         } else {
           // show missing keys at their original location
           $tail .= "\n$note\n";
