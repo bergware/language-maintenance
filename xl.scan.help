@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.help - find new and unused help sections in source webgui code, and check presence in native helptext file
-  Copyright @2022, Bergware International.
+  Copyright @2023, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -32,9 +32,10 @@ foreach ($site as $path) {
   foreach ($folders as $folder) foreach (glob("$path/$folder/{.[!.],}*",GLOB_NOSORT|GLOB_BRACE) as $file) $list[] = $file;
 }
 sort($list);
+//screen("\nList",$list);
 // create list of help sections per file
 foreach ($list as $file) {
-  $data = file($file,FILE_IGNORE_NEW_LINES);
+  $data = is_file($file) ? file($file,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) : [];
   foreach ($data as $row) if (preg_match('/^:(.+?_help):$/',$row,$matches)) {
     $name = base($file);
     init($help[$name]);

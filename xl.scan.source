@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.source - find new entries in source webgui code, and check presence in native language files
-  Copyright @2022, Bergware International.
+  Copyright @2023, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -29,7 +29,7 @@ function parse_lang_file($file) {
   return file_exists($file) ? parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file)))) : [];
 }
 function head($file) {
-  return file_get_contents($file,false,null,0,1024);
+  return is_file($file) ? file_get_contents($file,false,null,0,1024) : '';
 }
 function add($file, $section, $key) {
   global $sections, $list;

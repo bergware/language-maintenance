@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.void - find unused key entries in native language files
-  Copyright @2022, Bergware International.
+  Copyright @2023, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -20,7 +20,7 @@ function webgui($path) {
   return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager','dynamix.file.manager']);
 }
 function head($file) {
-  return file_get_contents($file,false,null,0,1024);
+  return is_file($file) ? file_get_contents($file,false,null,0,1024) : '';
 }
 function add($file, $section, $key) {
   global $sections, $list;
@@ -78,7 +78,7 @@ foreach ($site as $path) {
   foreach ($folders as $folder) {
     foreach (glob("$path/$folder/{.[!.],}*",GLOB_NOSORT|GLOB_BRACE) as $file) {
       if (in_array(basename($file),$files)||preg_match($request,head($file),$matches)) {
-        $section = strtolower($matches[1]) ?: 'translations';
+        $section = strtolower($matches[1]??'') ?: 'translations';
         init($sections[$section]);
         $sections[$section][] = $list[] = $file;
       }

@@ -54,6 +54,7 @@ foreach ($native as $file) {
         $section = 1;
         $key = '_'.substr($row,1,-1);
         if (!empty($target[$key])) {
+          // use translated plug section
           $copy[] = $shadow[] = preg_replace('/^\n+|\n+$/','',$target[$key]);
           $section = 2;
         }
