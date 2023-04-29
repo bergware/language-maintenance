@@ -20,14 +20,11 @@ function escapeQuotes($text) {
 function tag($key) {
   return preg_replace('/^(null|yes|no|true|false|on|off|none)$/i','$1.',$key);
 }
-function xlat($key) {
+function remap($key) {
   return preg_replace(['/\&amp;|[\?\{\}\|\&\~\!\[\]\(\)\/\\:\*^\.\"\']|<.+?\/?>/','/^(null|yes|no|true|false|on|off|none)$/i','/  +/'],['','$1.',' '],$key);
 }
 function parse_lang_file($file) {
   return parse_ini_string(preg_replace(['/^(null|yes|no|true|false|on|off|none)=/mi','/^([^>].*?)=(.*)$/m','/^:(.+_(help|plug)):$/m','/^:end$/m'],['$1.=','$1="$2"','_$1="','"'],escapeQuotes(file_get_contents($file))));
-}
-function screen($text,&$array) {
-  echo preg_replace(["/( => )?Array\n\s*\(/m","/^\s*\)\n/m","/=> /"],'',$text.print_r($array,true));
 }
 // loop thru plugin language files
 foreach ($native as $file) {
@@ -39,11 +36,11 @@ foreach ($native as $file) {
     $output = "$language/$name";
     // skip non-existing translations
     if (!is_file($output)) continue;
-    // find missing translations (if any)
+    // find current missing translations
     $note = exec("grep -m1 '^; Note:' ".escapeshellarg($output));
     $missing = $note ? explode(' ',explode(' - ',$note)[1])[0] : 0;
+    echo "Parsing: $output",str_repeat(' ',120-strlen($output)),"\r";
     // skip when parse error
-    echo "Parsing: $output".str_repeat(' ',120-strlen($output))."\r";
     if (!($target = parse_lang_file($output))) continue;
     $section = 0;
     $copy = $new = $shadow = [];
@@ -69,13 +66,18 @@ foreach ($native as $file) {
         $copy[] = $shadow[] = $row;
       } elseif ($section==0) {
         // translation line
-        [$key,$text] = explode('=',$row,2);
-        $data = trim($target[tag($key)]??'');
-        $shadow[] = "$key=".($data ?: $text);
-        if (empty($data) || ($text && tag($key)==xlat($data) && strlen($target[tag($key)])!=strlen(xlat($data)) && strlen($key)>14)) {
+        if (strpos($row,'=')===false) echo "\nError: '$row' is missing equal sign\n";
+        [$key,$text] = array_pad(explode('=',$row,2),2,'');
+        if (preg_match('/\&amp;|[\?\{\}\|\&\~\!\[\]\(\)\\*^\"]/',$key)) echo "\nError: '$key' is invalid\n";
+        // get translation text
+        $line = trim($target[tag($key)]??'');
+        $shadow[] = "$key=".($line ?: $text);
+        if (empty($line) || ($text && tag($key)==remap($line) && strlen($target[tag($key)])!=strlen(remap($line)) && strlen($key)>14)) {
+          // new or not translated key
           $new[] = "$key=$text"; 
         } else {
-          $copy[] = "$key=".($data ?: $text);
+          // translated key
+          $copy[] = "$key=".($line ?: $text);
         }
       }
     }
@@ -88,8 +90,10 @@ foreach ($native as $file) {
         $note = "; Note: $date - $size missing translations";
       }
       if ($size < 60) {
+        // show missing keys at the end
         $tail .= "\n$note\n".implode("\n",$new)."\n";
       } else {
+        // show missing keys at their original location
         $tail .= "\n$note\n";
         $copy = $shadow;
       } 
