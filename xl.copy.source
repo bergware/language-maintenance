@@ -46,47 +46,53 @@ foreach ($native as $file) {
     echo "Parsing: $output".str_repeat(' ',120-strlen($output))."\r";
     if (!($target = parse_lang_file($output))) continue;
     $section = 0;
-    $copy = $last = [];
+    $copy = $new = $shadow = [];
     foreach ($source as $row) {
       if (empty($row) || $row[0]==';') {
         // empty row or comment
-        if ($section==0) $copy[] = $row;
+        if ($section==0) $copy[] = $shadow[] = $row; 
       } elseif ($row[0]==':' && substr($row,-5)=='plug:') {
         // start of plug section
-        $copy[] = $row;
+        $copy[] = $shadow[] = $row;
         $section = 1;
         $key = '_'.substr($row,1,-1);
         if (!empty($target[$key])) {
-          $copy[] = preg_replace('/^\n+|\n+$/','',$target[$key]);
+          $copy[] = $shadow[] = preg_replace('/^\n+|\n+$/','',$target[$key]);
           $section = 2;
         }
       } elseif ($row==':end') {
         // end of plug section
-        $copy[] = $row;
+        $copy[] = $shadow[] = $row;
         $section = 0;
       } elseif ($section==1) {
         // inside plug section
-        $copy[] = $row;
+        $copy[] = $shadow[] = $row;
       } elseif ($section==0) {
         // translation line
         [$key,$text] = explode('=',$row,2);
-        $new = trim($target[tag($key)]??'');
-        if (empty($new) || ($text && tag($key)==xlat($new) && strlen($target[tag($key)])!=strlen(xlat($new)) && strlen($key)>14)) {
-          $last[] = "$key=$text"; 
+        $data = trim($target[tag($key)]??'');
+        $shadow[] = "$key=".($data ?: $text);
+        if (empty($data) || ($text && tag($key)==xlat($data) && strlen($target[tag($key)])!=strlen(xlat($data)) && strlen($key)>14)) {
+          $new[] = "$key=$text"; 
         } else {
-          $copy[] = "$key=".($new ?: $text);
+          $copy[] = "$key=".($data ?: $text);
         }
       }
     }
     $tail = "\n";
-    $size = count($last);
+    $size = count($new);
     if ($size) {
       if ($size != $missing) {
         echo "\nUpdating: $output ($size)\n";
         $date = date('F j, Y');
         $note = "; Note: $date - $size missing translations";
       }
-      $tail .= "\n$note\n".implode("\n",$last)."\n";
+      if ($size < 60) {
+        $tail .= "\n$note\n".implode("\n",$new)."\n";
+      } else {
+        $tail .= "\n$note\n";
+        $copy = $shadow;
+      } 
     }
     file_put_contents($output,implode("\n",$copy).$tail);
   }
