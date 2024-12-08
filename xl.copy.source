@@ -72,13 +72,13 @@ foreach ($native as $file) {
         if (preg_match('/\&amp;|[\?\{\}\|\&\~\!\[\]\(\)\\*^\"]/',$key)) echo "\nError: '$key' is invalid\n";
         // get translation text
         $line = trim($target[tag($key)]??'');
-        $shadow[] = "$key=".($line ?: $text);
+        $shadow[] = trim($key)."=".trim($line ?: $text);
         if (empty($line) || ($text && tag($key)==remap($line) && strlen($target[tag($key)])!=strlen(remap($line)) && strlen($key)>14)) {
           // new or not translated key
-          $missing[] = "$key=$text"; 
+          $missing[] = trim($key)."=".trim($text); 
         } else {
           // translated key
-          $copy[] = "$key=".($line ?: $text);
+          $copy[] = trim($key)."=".trim($line ?: $text);
         }
       }
     }
