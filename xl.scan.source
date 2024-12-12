@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.source - find new entries in source webgui code, and check presence in native language files
-  Copyright @2023, Bergware International.
+  Copyright @2024, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -17,7 +17,7 @@ $keys     = ['Days_array','Months_array','Numbers_array','prefix_IEC','prefix_SI
 $sections = $more = $list = $other = [];
 
 function webgui($path) {
-  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager','dynamix.file.manager']);
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.gui.search','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager']);
 }
 function make($array) {
   return array_map(function($k,$v){return $v ?: preg_replace('/\.$/','',$k);},array_keys($array),array_values($array));

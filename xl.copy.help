@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.copy.help - copy new help sections and remove unused sections in foreign helptext files
-  Copyright @2023, Bergware International.
+  Copyright @2024, Bergware International.
 */
 
 $rootdir = "/boot/unraid/languages";

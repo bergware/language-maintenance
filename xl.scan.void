@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.void - find unused key entries in native language files
-  Copyright @2023, Bergware International.
+  Copyright @2024, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -17,7 +17,7 @@ $keys     = ['Days_array','Months_array','Numbers_array','prefix_IEC','prefix_SI
 $sections = $more = $list = [];
 
 function webgui($path) {
-  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager','dynamix.file.manager']);
+  return in_array(basename($path),['dynamix','dynamix.apcupsd','dynamix.docker.manager','dynamix.gui.search','dynamix.plugin.manager','dynamix.my.servers','dynamix.unraid.net','dynamix.vm.manager']);
 }
 function head($file) {
   return is_file($file) ? file_get_contents($file,false,null,0,1024) : '';

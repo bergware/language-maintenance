@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.scan.help - find new and unused help sections in source webgui code, and check presence in native helptext file
-  Copyright @2023, Bergware International.
+  Copyright @2024, Bergware International.
 */
 
 $plugins  = "/usr/local/emhttp/plugins";
@@ -61,6 +61,6 @@ foreach ($source as $find) {
   foreach ($help as $row => $names) if (in_array($find,$names)) {$void=false; break;}
   if ($void) $unused[] = $find;
 }
-screen("\nMissing entries in source code",$missing);
+screen("\nMissing entries in helptext",$missing);
 screen("\nUnused entries in helptext",$unused);
 ?>

@@ -2,7 +2,7 @@
 <?PHP
 /*
   xl.copy.plugin - copy new plugin entries to foreign language files
-  Copyright @2023, Bergware International.
+  Copyright @2024, Bergware International.
 */
 $select  = isset($argv[1]) ? 'lang-'.$argv[1] : '*';
 $rootdir = "/boot/unraid/languages";
